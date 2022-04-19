@@ -302,7 +302,7 @@ const drillDownOutButton = dashboard.addUIElement(UIElementBuilders.TextBox, das
     return totalCasesTimelineView;
   };
 
-  let activeDisplayedTime = new Date(2021, 11, 1);
+  let activeDisplayedTime = new Date(2022, 2, 11);
   let tMax = ISODateToTime(
     covidData["FIN"].data[covidData["FIN"].data.length - 1].date
   );
