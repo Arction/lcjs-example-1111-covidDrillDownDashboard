@@ -107,14 +107,14 @@ Direct developer email support can be purchased through a [Support Plan][4] or b
 © LightningChart Ltd 2009-2022. All rights reserved.
 
 
-[Dashboard]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/Dashboard.html
-[Map Chart]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/MapChart.html
-[Chart XY]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/ChartXY.html
-[Axis]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/Axis.html
-[Axis scroll strategies]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/variables/AxisScrollStrategies.html
-[Axis tick strategies]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/variables/AxisTickStrategies.html
-[Lookup table]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/LUT.html
-[Line series]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/LineSeries.html
-[Point series]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/PointSeries.html
-[Band]: https://lightningchart.com/lightningchart-js-api-documentation/v4.0.0/classes/Band.html
+[Dashboard]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/Dashboard.html
+[Map Chart]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/MapChart.html
+[Chart XY]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/ChartXY.html
+[Axis]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/Axis.html
+[Axis scroll strategies]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/variables/AxisScrollStrategies.html
+[Axis tick strategies]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/variables/AxisTickStrategies.html
+[Lookup table]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/LUT.html
+[Line series]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/LineSeries.html
+[Point series]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/PointSeries.html
+[Band]: https://lightningchart.com/lightningchart-js-api-documentation/v4.1.0/classes/Band.html
 
