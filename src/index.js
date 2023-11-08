@@ -32,6 +32,7 @@ const {
 } = lcjs
 
 const dashboardRows = 4
+// NOTE: Using `Dashboard` is no longer recommended for new applications. Find latest recommendations here: https://lightningchart.com/js-charts/docs/basic-topics/grouping-charts/
 const dashboard = lightningChart().Dashboard({
     numberOfColumns: 1,
     numberOfRows: dashboardRows,
@@ -71,54 +72,44 @@ const drillDownRoutes = {
         {
             mapType: 'NorthAmerica',
             boundary: {
-                bottomLeft: { x: 4, y: 52 },
-                topRight: { x: 44, y: 93 },
+                bottomLeft: { x: 0.04, y: 0.52 },
+                topRight: { x: 0.44, y: 0.93 },
             },
         },
         {
             mapType: 'SouthAmerica',
             boundary: {
-                bottomLeft: { x: 16, y: 14 },
-                topRight: { x: 45, y: 50 },
+                bottomLeft: { x: 0.16, y: 0.14 },
+                topRight: { x: 0.45, y: 0.5 },
             },
         },
         {
             mapType: 'Europe',
             boundary: {
-                bottomLeft: { x: 45, y: 64 },
-                topRight: { x: 60, y: 93 },
+                bottomLeft: { x: 0.45, y: 0.64 },
+                topRight: { x: 0.6, y: 0.93 },
             },
         },
         {
             mapType: 'Africa',
             boundary: {
-                bottomLeft: { x: 46, y: 15 },
-                topRight: { x: 63, y: 64 },
+                bottomLeft: { x: 0.46, y: 0.15 },
+                topRight: { x: 0.63, y: 0.64 },
             },
         },
         {
             mapType: 'Asia',
             boundary: {
-                bottomLeft: { x: 59, y: 40 },
-                topRight: { x: 95, y: 91 },
+                bottomLeft: { x: 0.59, y: 0.4 },
+                topRight: { x: 0.95, y: 0.91 },
             },
         },
     ],
 }
 
 const drillDownTip = dashboard
-    .addUIElement(UILayoutBuilders.Column, dashboard.uiScale)
+    .addUIElement(UILayoutBuilders.Column, dashboard.coordsRelative)
     .setOrigin(UIOrigins.RightTop)
-    .setPosition(
-        translatePoint(
-            {
-                x: dashboard.engine.container.getBoundingClientRect().width - 8,
-                y: dashboard.engine.container.getBoundingClientRect().height - 40,
-            },
-            dashboard.engine.scale,
-            dashboard.uiScale,
-        ),
-    )
     .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine))
 const drillDownTipIn = drillDownTip
     .addElement(UIElementBuilders.TextBox)
@@ -130,20 +121,18 @@ const drillDownTipOut = drillDownTip
     .setText('Double left click to zoom out')
 
 const drillDownOutButton = dashboard
-    .addUIElement(UIElementBuilders.TextBox, dashboard.uiScale)
+    .addUIElement(UIElementBuilders.TextBox, dashboard.coordsRelative)
     .setOrigin(UIOrigins.LeftTop)
-    .setPosition(
-        translatePoint(
-            { x: 8, y: dashboard.engine.container.getBoundingClientRect().height - 8 },
-            dashboard.engine.scale,
-            dashboard.uiScale,
-        ),
-    )
     .setText('Zoom out')
     .setTextFont((font) => font.setSize(20))
     .setDraggingMode(UIDraggingModes.notDraggable)
     .setMouseStyle(MouseStyles.Point)
 
+dashboard.onResize(() => {
+    const dbBounds = dashboard.engine.container.getBoundingClientRect()
+    drillDownTip.setPosition({ x: dbBounds.width - 8, y: dbBounds.height - 40 })
+    drillDownOutButton.setPosition({ x: 8, y: dbBounds.height - 8 })
+})
 ;(async () => {
     let covidData
     let vaccinationData
@@ -278,11 +267,7 @@ const drillDownOutButton = dashboard
 
         timelineChart.getDefaultAxisX().setTickStrategy(AxisTickStrategies.DateTime).setMouseInteractions(false).fit(false)
         timeLineHighlighter.onMouseDrag((_, event) => {
-            const locationEngine = timelineChart.engine.clientLocation2Engine(event.clientX, event.clientY)
-            const locationAxis = translatePoint(locationEngine, timelineChart.engine.scale, {
-                x: timelineChart.getDefaultAxisX(),
-                y: timelineChart.getDefaultAxisY(),
-            })
+            const locationAxis = timelineChart.translateCoordinate(event, timelineChart.coordsAxis)
             const displayTimeNew = Math.min(Math.max(locationAxis.x, newCasesHistoryDataTimeStart), tMax)
             timeLineHighlighter.setValue(displayTimeNew)
             if (totalCasesTimelineView.onChange) {
@@ -573,7 +558,7 @@ const drillDownOutButton = dashboard
         })
 
         mapChartXY.onSeriesBackgroundMouseMove((_, event) => {
-            const nearest = scatterSeries.solveNearestFromScreen(mapChartXY.engine.clientLocation2Engine(event.clientX, event.clientY))
+            const nearest = scatterSeries.solveNearestFromScreen(event)
             if (nearest) {
                 cursorTarget = nearest.location
                 cursorLastPointedCountry = cursorTarget.countryCode
@@ -585,18 +570,16 @@ const drillDownOutButton = dashboard
         })
         const intervalUpdateCursor = setInterval(() => {
             if (cursorTarget && cursorTarget.countryCode !== cursorActiveCountry) {
-                const locationEngine = translatePoint(
-                    { x: cursorTarget.x, y: cursorTarget.y },
-                    { x: mapChartXY.getDefaultAxisX(), y: mapChartXY.getDefaultAxisY() },
-                    mapChartXY.engine.scale,
-                )
-                const locationWebpage = mapChartXY.engine.engineLocation2Client(locationEngine.x, locationEngine.y)
+                const locationWebpage = mapChartXY.translateCoordinate(cursorTarget, mapChartXY.coordsAxis, mapChartXY.coordsClient)
                 const containerBounds = container.getBoundingClientRect()
                 containerOverlayCursor.style.left = `${Math.max(
-                    locationWebpage.x - (overlayCursorWidth + 10 + containerBounds.left),
+                    locationWebpage.clientX - (overlayCursorWidth + 10 + containerBounds.left),
                     10,
                 )}px`
-                containerOverlayCursor.style.top = `${Math.max(locationWebpage.y - (overlayCursorHeight + 10 + containerBounds.top), 10)}px`
+                containerOverlayCursor.style.top = `${Math.max(
+                    locationWebpage.clientY - (overlayCursorHeight + 10 + containerBounds.top),
+                    10,
+                )}px`
                 containerOverlayCursor.style.opacity = '1.0'
                 chartOverlayCursor.engine.layout()
 
@@ -661,16 +644,17 @@ const drillDownOutButton = dashboard
                     return
                 }
                 // Attempt drill down at mouse location.
-                const locationEngine = mapChartXY.engine.clientLocation2Engine(e.clientX, e.clientY)
-                const locationChart = translatePoint(locationEngine, mapChartXY.engine.scale, mapChartXY.uiScale)
+                const locationRelative = mapChartXY.translateCoordinate(e, mapChartXY.coordsRelative)
+                const chartSize = mapChartXY.getSizePixels()
+                const locationPercentage = { x: locationRelative.x / chartSize.x, y: locationRelative.y / chartSize.y }
                 const routes = drillDownRoutes[mapType] || []
                 // Attempt to drill down to a smaller map view.
                 for (const route of routes) {
                     if (
-                        locationChart.x >= route.boundary.bottomLeft.x &&
-                        locationChart.x <= route.boundary.topRight.x &&
-                        locationChart.y >= route.boundary.bottomLeft.y &&
-                        locationChart.y <= route.boundary.topRight.y
+                        locationPercentage.x >= route.boundary.bottomLeft.x &&
+                        locationPercentage.x <= route.boundary.topRight.x &&
+                        locationPercentage.y >= route.boundary.bottomLeft.y &&
+                        locationPercentage.y <= route.boundary.topRight.y
                     ) {
                         disposeChart()
                         activateMapView(route.mapType)
@@ -784,13 +768,14 @@ const drillDownOutButton = dashboard
 
             if (iTrend === 0) {
                 const dashboardTitle = chart
-                    .addUIElement(UIElementBuilders.TextBox)
-                    .setPosition({ x: 0, y: 100 })
-                    .setMargin({ left: 140, top: chart.getTitleMargin().top })
-                    .setOrigin(UIOrigins.LeftTop)
+                    .addUIElement(UIElementBuilders.TextBox, chart.coordsRelative)
                     .setText(`${countryInformation.name.common}`)
                     .setTextFont((font) => font.setSize(22))
                     .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine))
+
+                chart.onResize(() => {
+                    dashboardTitle.setPosition({ x: 140, y: chart.getSizePixels().y }).setOrigin(UIOrigins.LeftTop)
+                })
 
                 // Add selector for displaying relative / actual values.
                 const selector = chart
