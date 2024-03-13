@@ -36,7 +36,7 @@ const dashboardRows = 4
 const dashboard = lightningChart().Dashboard({
     numberOfColumns: 1,
     numberOfRows: dashboardRows,
-    theme: Themes[new URLSearchParams(window.location.search).get('theme') || 'darkGold'] || undefined,,
+    theme: Themes[new URLSearchParams(window.location.search).get('theme') || 'darkGold'] || undefined,
 })
 const theme = dashboard.getTheme()
 
