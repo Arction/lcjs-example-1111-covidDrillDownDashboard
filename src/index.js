@@ -140,19 +140,27 @@ dashboard.onResize(() => {
     await Promise.all([
         new Promise(async (resolve) => {
             console.time('loading covid data')
-            covidData = await fetch(document.head.baseURI + 'examples/assets/1111/owid-covid-data.json').then((r) => r.json())
+            covidData = await fetch(
+                new URL(document.head.baseURI).origin +
+                    new URL(document.head.baseURI).pathname +
+                    'examples/assets/1111/owid-covid-data.json',
+            ).then((r) => r.json())
             console.timeEnd('loading covid data')
             resolve()
         }),
         new Promise(async (resolve) => {
             console.time('loading covid vaccinations data')
-            vaccinationData = await fetch(document.head.baseURI + 'examples/assets/1111/vaccinations.json').then((r) => r.json())
+            vaccinationData = await fetch(
+                new URL(document.head.baseURI).origin + new URL(document.head.baseURI).pathname + 'examples/assets/1111/vaccinations.json',
+            ).then((r) => r.json())
             console.timeEnd('loading covid vaccinations data')
             resolve()
         }),
         new Promise(async (resolve) => {
             console.time('loading country locations data')
-            countriesData = await fetch(document.head.baseURI + 'examples/assets/1111/countries.json').then((r) => r.json())
+            countriesData = await fetch(
+                new URL(document.head.baseURI).origin + new URL(document.head.baseURI).pathname + 'examples/assets/1111/countries.json',
+            ).then((r) => r.json())
             console.timeEnd('loading country locations data')
             resolve()
         }),
