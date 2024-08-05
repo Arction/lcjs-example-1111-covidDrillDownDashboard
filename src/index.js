@@ -2,7 +2,7 @@
  * In-depth example of map dashboard with data drill-down. Visualizes relations between CoVID vaccinations and cases
  */
 
-const lcjs = require('@arction/lcjs')
+const lcjs = require('@lightningchart/lcjs')
 const {
     AxisScrollStrategies,
     AxisTickStrategies,
@@ -21,7 +21,6 @@ const {
     SolidFill,
     emptyLine,
     synchronizeAxisIntervals,
-    translatePoint,
     transparentFill,
     UIOrigins,
     MouseStyles,
@@ -228,7 +227,7 @@ dashboard.onResize(() => {
                 rowIndex: 1,
             })
             .setTitle('Global CoVID daily new cases history')
-            .setAutoCursorMode(AutoCursorModes.disabled)
+            .setCursorMode(undefined)
             .setMouseInteractions(false)
 
         const timeLineHighlighterAxis = timelineChart
@@ -243,10 +242,7 @@ dashboard.onResize(() => {
             .setTextFormatter((time) => new Date(time).toLocaleDateString('fin', {}))
         synchronizeAxisIntervals(timelineChart.getDefaultAxisX(), timeLineHighlighterAxis)
 
-        timelineChart
-            .addLineSeries({ dataPattern: { pattern: 'ProgressiveX' } })
-            .setCursorInterpolationEnabled(false)
-            .add(newCasesHistoryDataXY)
+        timelineChart.addLineSeries({ dataPattern: { pattern: 'ProgressiveX' } }).add(newCasesHistoryDataXY)
         timelineChart
             .getDefaultAxisY()
             .setMouseInteractions(false)
@@ -263,7 +259,6 @@ dashboard.onResize(() => {
             .setInterval({ start: 0, end: 100 })
         timelineChart
             .addLineSeries({ dataPattern: { pattern: 'ProgressiveX' }, yAxis: axisVaccinated })
-            .setCursorInterpolationEnabled(false)
             .add(vaccinatedPerHundredHistoryDataXY)
             .setStrokeStyle(
                 new SolidLine({
@@ -334,7 +329,7 @@ dashboard.onResize(() => {
                 rowIndex: 0,
                 type: mapType,
             })
-            .setAutoCursorMode(AutoCursorModes.disabled)
+            .setCursorMode(undefined)
             .setMouseInteractions(false)
             .setPadding({ top: 40 })
 
@@ -347,7 +342,7 @@ dashboard.onResize(() => {
             .setBackgroundFillStyle(transparentFill)
             .setSeriesBackgroundFillStyle(transparentFill)
             .setSeriesBackgroundStrokeStyle(emptyLine)
-            .setAutoCursorMode(AutoCursorModes.disabled)
+            .setCursorMode(undefined)
             .setMouseInteractions(false)
 
         mapChartXY.forEachAxis((axis) => axis.setTickStrategy(AxisTickStrategies.Empty).setStrokeStyle(emptyLine))
@@ -376,12 +371,12 @@ dashboard.onResize(() => {
         )
 
         const scatterSeries = mapChartXY
-            .addPointSeries({ pointShape: PointShape.Circle })
-            .setIndividualPointSizeEnabled(true)
-            .setIndividualPointValueEnabled(true)
+            .addPointLineAreaSeries({ dataPattern: null, sizes: true, lookupValues: true, ids: true })
+            .setStrokeStyle(emptyLine)
             .setPointFillStyle(new PalettedFill({ lut: lutNewCasesPerMillion }))
             .setMouseInteractions(false)
 
+        let regions = []
         const setDisplayTime = (time, updateTimeLineBand = false) => {
             activeDisplayedTime = time
             const timeNumber = time.getTime()
@@ -391,6 +386,8 @@ dashboard.onResize(() => {
 
             scatterSeries.clear()
 
+            let iRegion = 0
+            regions = []
             mapChart.invalidateRegionValues((region, prev) => {
                 const countryCode = region.ISO_A3
                 const countryCovidData = covidData[countryCode]
@@ -421,14 +418,14 @@ dashboard.onResize(() => {
                                 ? 0
                                 : clampNumber((25 * smoothedNewCasesPerMillion) / 1000, mapType === 'World' ? 1 : 5, 25)
                         scatterSeries.add({
-                            countryCode,
-                            smoothedNewCasesPerMillion,
-                            peopleVaccinatedPerHundred,
+                            id: iRegion,
                             x: longitude,
                             y: latitude,
-                            value: smoothedNewCasesPerMillion,
+                            lookupValue: smoothedNewCasesPerMillion,
                             size: pointSize,
                         })
+                        regions.push(region)
+                        iRegion += 1
 
                         // Return value is used for map region coloring.
                         return peopleVaccinatedPerHundred
@@ -494,7 +491,6 @@ dashboard.onResize(() => {
             return {
                 series: chartOverlayCursor
                     .addLineSeries({ yAxis, dataPattern: { pattern: 'ProgressiveX' } })
-                    .setCursorInterpolationEnabled(false)
                     .setStrokeStyle((stroke) => stroke.setFillStyle(fill)),
                 label: ChartOverlayItem(label).setTextFillStyle(fill),
                 valueLabel: chartOverlayCursor
@@ -568,9 +564,10 @@ dashboard.onResize(() => {
         })
 
         mapChartXY.onSeriesBackgroundMouseMove((_, event) => {
-            const nearest = scatterSeries.solveNearestFromScreen(event)
-            if (nearest) {
-                cursorTarget = nearest.location
+            const nearest = scatterSeries.solveNearest(event)
+            const region = regions[nearest?.id]
+            if (nearest && region) {
+                cursorTarget = { countryCode: region.ISO_A3, ...nearest }
                 cursorLastPointedCountry = cursorTarget.countryCode
             }
         })
@@ -839,10 +836,6 @@ dashboard.onResize(() => {
                     dataPattern: { pattern: 'ProgressiveX' },
                 })
                 .setName(`${countryInformation.name.common}`)
-                .setCursorInterpolationEnabled(false)
-                .setCursorResultTableFormatter((builder, _, x, y, dataPoint) =>
-                    builder.addRow(`${countryInformation.name.common}`).addRow(axisX.formatValue(dataPoint.x)).addRow(trend.format(y)),
-                )
             const dataXY = trend.dataSet.data
                 .map((sample) => ({
                     x: ISODateToTime(sample.date),
@@ -859,10 +852,6 @@ dashboard.onResize(() => {
                         dataPattern: { pattern: 'ProgressiveX' },
                     })
                     .setName('Global average')
-                    .setCursorInterpolationEnabled(false)
-                    .setCursorResultTableFormatter((builder, _, x, y, dataPoint) =>
-                        builder.addRow(`Global average`).addRow(axisX.formatValue(dataPoint.x)).addRow(trend.format(y)),
-                    )
                     .add(averageData)
                 const styleNormal = series.getStrokeStyle()
                 seriesAverage.setStrokeStyle(styleNormal.setFillStyle(styleNormal.getFillStyle().setA(100)))
