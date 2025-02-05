@@ -129,7 +129,7 @@ const drillDownOutButton = dashboard
     .setDraggingMode(UIDraggingModes.notDraggable)
     .setMouseStyle(MouseStyles.Point)
 
-dashboard.onResize(() => {
+dashboard.addEventListener('resize', (event) => {
     const dbBounds = dashboard.engine.container.getBoundingClientRect()
     drillDownTip.setPosition({ x: dbBounds.width - 8, y: dbBounds.height - 40 })
     drillDownOutButton.setPosition({ x: 8, y: dbBounds.height - 8 })
@@ -228,24 +228,21 @@ dashboard.onResize(() => {
             })
             .setTitle('Global CoVID daily new cases history')
             .setCursorMode(undefined)
-            .setMouseInteractions(false)
+            .setUserInteractions(undefined)
 
         const timeLineHighlighterAxis = timelineChart
             .addAxisX({ opposite: true })
             .setTickStrategy(AxisTickStrategies.Empty)
             .setStrokeStyle(emptyLine)
-            .setMouseInteractions(false)
         const timeLineHighlighter = timeLineHighlighterAxis
             .addCustomTick(UIElementBuilders.PointableTextBox)
-            .setMouseInteractions(true)
             .setAllocatesAxisSpace(false)
             .setTextFormatter((time) => new Date(time).toLocaleDateString('fin', {}))
         synchronizeAxisIntervals(timelineChart.getDefaultAxisX(), timeLineHighlighterAxis)
 
-        timelineChart.addLineSeries({ dataPattern: { pattern: 'ProgressiveX' } }).add(newCasesHistoryDataXY)
+        timelineChart.addPointLineAreaSeries({ dataPattern: 'ProgressiveX' }).setAreaFillStyle(emptyFill).appendJSON(newCasesHistoryDataXY)
         timelineChart
             .getDefaultAxisY()
-            .setMouseInteractions(false)
             .setTitle('New daily cases')
             .setTitleFont((font) => font.setSize(12))
             .setTickStrategy(AxisTickStrategies.Numeric, (ticks) => ticks.setFormattingFunction(FormattingFunctions.NumericUnits))
@@ -255,11 +252,11 @@ dashboard.onResize(() => {
             .addAxisY({ opposite: true })
             .setTitle('Vaccinated once (%)')
             .setTitleFont((font) => font.setSize(12))
-            .setMouseInteractions(false)
             .setInterval({ start: 0, end: 100 })
         timelineChart
-            .addLineSeries({ dataPattern: { pattern: 'ProgressiveX' }, yAxis: axisVaccinated })
-            .add(vaccinatedPerHundredHistoryDataXY)
+            .addPointLineAreaSeries({ dataPattern: 'ProgressiveX', yAxis: axisVaccinated })
+            .setAreaFillStyle(emptyFill)
+            .appendJSON(vaccinatedPerHundredHistoryDataXY)
             .setStrokeStyle(
                 new SolidLine({
                     thickness: 2,
@@ -270,20 +267,28 @@ dashboard.onResize(() => {
                 }),
             )
 
-        timelineChart.getDefaultAxisX().setTickStrategy(AxisTickStrategies.DateTime).setMouseInteractions(false).fit(false)
-        timeLineHighlighter.onMouseDrag((_, event) => {
-            const locationAxis = timelineChart.translateCoordinate(event, timelineChart.coordsAxis)
-            const displayTimeNew = Math.min(Math.max(locationAxis.x, newCasesHistoryDataTimeStart), tMax)
-            timeLineHighlighter.setValue(displayTimeNew)
-            if (totalCasesTimelineView.onChange) {
-                totalCasesTimelineView.onChange(displayTimeNew)
-            }
-        })
-        timeLineHighlighter.onMouseEnter((_, e) => {
+        timelineChart.getDefaultAxisX().setTickStrategy(AxisTickStrategies.DateTime).fit(false)
+        timeLineHighlighter.addEventListener('pointerenter', (event) => {
             timelineChart.engine.setMouseStyle(MouseStyles.Horizontal)
         })
-        timeLineHighlighter.onMouseLeave((_, e) => {
+        timeLineHighlighter.addEventListener('pointerleave', (event) => {
             timelineChart.engine.setMouseStyle(MouseStyles.Default)
+        })
+        timeLineHighlighter.addEventListener('pointerdown', (event) => {
+            const handleMove = (event) => {
+                const locationAxis = timelineChart.translateCoordinate(event, timelineChart.coordsAxis)
+                const displayTimeNew = Math.min(Math.max(locationAxis.x, newCasesHistoryDataTimeStart), tMax)
+                timeLineHighlighter.setValue(displayTimeNew)
+                if (totalCasesTimelineView.onChange) {
+                    totalCasesTimelineView.onChange(displayTimeNew)
+                }
+            }
+            const handleUp = (event) => {
+                document.body.removeEventListener('pointermove', handleMove)
+                document.body.removeEventListener('pointerup', handleUp)
+            }
+            document.body.addEventListener('pointermove', handleMove)
+            document.body.addEventListener('pointerup', handleUp)
         })
         console.timeEnd('calculate new cases history')
 
@@ -330,7 +335,7 @@ dashboard.onResize(() => {
                 type: mapType,
             })
             .setCursorMode(undefined)
-            .setMouseInteractions(false)
+            .setPointerEvents(false)
             .setPadding({ top: 40 })
 
         const mapChartXY = dashboard
@@ -343,24 +348,23 @@ dashboard.onResize(() => {
             .setSeriesBackgroundFillStyle(transparentFill)
             .setSeriesBackgroundStrokeStyle(emptyLine)
             .setCursorMode(undefined)
-            .setMouseInteractions(false)
+            .setUserInteractions(undefined)
 
         mapChartXY.forEachAxis((axis) => axis.setTickStrategy(AxisTickStrategies.Empty).setStrokeStyle(emptyLine))
-
-        mapChart.onViewChange((view) => {
+        mapChart.addEventListener('viewchange', (event) => {
             mapChartXY.setPadding({
-                left: view.margin.left,
-                right: view.margin.right,
-                top: view.margin.top,
-                bottom: view.margin.bottom,
+                left: event.margin.left,
+                right: event.margin.right,
+                top: event.margin.top,
+                bottom: event.margin.bottom,
             })
             mapChartXY.getDefaultAxisX().setInterval({
-                start: view.longitudeRange.start,
-                end: view.longitudeRange.end,
+                start: event.longitudeRange.start,
+                end: event.longitudeRange.end,
             })
             mapChartXY.getDefaultAxisY().setInterval({
-                start: view.latitudeRange.start,
-                end: view.latitudeRange.end,
+                start: event.latitudeRange.start,
+                end: event.latitudeRange.end,
             })
         })
 
@@ -374,7 +378,7 @@ dashboard.onResize(() => {
             .addPointLineAreaSeries({ dataPattern: null, sizes: true, lookupValues: true, ids: true })
             .setStrokeStyle(emptyLine)
             .setPointFillStyle(new PalettedFill({ lut: lutNewCasesPerMillion }))
-            .setMouseInteractions(false)
+            .setPointerEvents(false)
 
         let regions = []
         const setDisplayTime = (time, updateTimeLineBand = false) => {
@@ -462,7 +466,7 @@ dashboard.onResize(() => {
             })
             .setTitle('')
             .setPadding({ left: 0, bottom: 0, right: 0, top: 14 })
-            .setMouseInteractions(false)
+            .setUserInteractions(undefined)
             .setBackgroundFillStyle(theme.cursorResultTableFillStyle)
         chartOverlayCursor
             .setBackgroundFillStyle(emptyFill)
@@ -490,7 +494,9 @@ dashboard.onResize(() => {
                 .setScrollStrategy(AxisScrollStrategies.expansion)
             return {
                 series: chartOverlayCursor
-                    .addLineSeries({ yAxis, dataPattern: { pattern: 'ProgressiveX' } })
+                    .addPointLineAreaSeries({ yAxis, dataPattern: 'ProgressiveX' })
+                    .setAreaFillStyle(emptyFill)
+                    .setPointFillStyle(emptyFill)
                     .setStrokeStyle((stroke) => stroke.setFillStyle(fill)),
                 label: ChartOverlayItem(label).setTextFillStyle(fill),
                 valueLabel: chartOverlayCursor
@@ -550,20 +556,20 @@ dashboard.onResize(() => {
         containerOverlayCursor.style.opacity = '0.0'
         containerOverlayCursor.style.pointerEvents = 'none'
         chartOverlayCursor.forEachAxis((axis) =>
-            axis.setTickStrategy(AxisTickStrategies.Empty).setStrokeStyle(emptyLine).setMouseInteractions(false),
+            axis.setTickStrategy(AxisTickStrategies.Empty).setStrokeStyle(emptyLine).setPointerEvents(false),
         )
 
         let cursorTarget
         let cursorActiveCountry
         let cursorLastPointedCountry
 
-        mapChart.onMapDataReady(() => {
+        mapChart.addEventListener('ready', (event) => {
             setTimeout(() => {
                 cursorTarget = { countryCode: 'ITA', x: 12.83, y: 42.83 }
             }, 500)
         })
 
-        mapChartXY.onSeriesBackgroundMouseMove((_, event) => {
+        mapChartXY.seriesBackground.addEventListener('pointermove', (event) => {
             const nearest = scatterSeries.solveNearest(event)
             const region = regions[nearest?.id]
             if (nearest && region) {
@@ -571,7 +577,7 @@ dashboard.onResize(() => {
                 cursorLastPointedCountry = cursorTarget.countryCode
             }
         })
-        mapChartXY.onSeriesBackgroundMouseLeave(() => {
+        mapChartXY.seriesBackground.addEventListener('pointerleave', (event) => {
             cursorActiveCountry = undefined
             cursorTarget = undefined
         })
@@ -644,8 +650,7 @@ dashboard.onResize(() => {
         }, 1000 / 60)
 
         detectMouseClicks(
-            mapChartXY.onSeriesBackgroundMouseClick.bind(mapChartXY),
-            mapChartXY.onSeriesBackgroundMouseDoubleClick.bind(mapChartXY),
+            mapChartXY.seriesBackground,
             (e) => {
                 if (window.performance.now() - tLastMapViewChange < 750) {
                     return
@@ -683,13 +688,13 @@ dashboard.onResize(() => {
             },
         )
 
-        const subDrillDownOutButtonClick = drillDownOutButton.onMouseClick((_, e) => {
+        const handleClickDrillDown = (event) => {
             if (mapType !== 'World' && window.performance.now() - tLastMapViewChange > 500) {
                 disposeChart()
                 activateMapView('World')
             }
-        })
-
+        }
+        drillDownOutButton.addEventListener('click', handleClickDrillDown)
         let disposeChart = () => {
             clearInterval(intervalUpdateCursor)
             clearInterval(intervalUpdateTimeRange)
@@ -697,7 +702,7 @@ dashboard.onResize(() => {
             mapChartXY.dispose()
             chartOverlayCursor.dispose()
             containerOverlayCursor.remove()
-            drillDownOutButton.offMouseClick(subDrillDownOutButtonClick)
+            drillDownOutButton.removeEventListener('click', handleClickDrillDown)
             disposeChart = () => {}
         }
     }
@@ -780,8 +785,8 @@ dashboard.onResize(() => {
                     .setTextFont((font) => font.setSize(22))
                     .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine))
 
-                chart.onResize(() => {
-                    dashboardTitle.setPosition({ x: 140, y: chart.getSizePixels().y }).setOrigin(UIOrigins.LeftTop)
+                chart.addEventListener('layoutchange', (event) => {
+                    dashboardTitle.setOrigin(UIOrigins.LeftTop).setPosition({ x: 140, y: event.height - 10 })
                 })
 
                 // Add selector for displaying relative / actual values.
@@ -791,8 +796,8 @@ dashboard.onResize(() => {
                     .setOrigin(UIOrigins.RightTop)
                     .setMargin({ top: 14, right: 24 })
                     .setDraggingMode(UIDraggingModes.notDraggable)
-                selector.onMouseEnter((_) => chart.engine.setMouseStyle(MouseStyles.Point))
-                selector.onMouseLeave((_) => chart.engine.setMouseStyle(MouseStyles.Default))
+                selector.addEventListener('pointerenter', () => chart.engine.setMouseStyle(MouseStyles.Point))
+                selector.addEventListener('pointerleave', () => chart.engine.setMouseStyle(MouseStyles.Default))
                 const setState = (displayRelative) => {
                     if (displayRelative !== showRelativeValuesState) {
                         showRelativeValuesState = displayRelative
@@ -802,14 +807,14 @@ dashboard.onResize(() => {
                     }
                     selector.setText(displayRelative ? 'Show actual values' : 'Show relative values')
                 }
-                selector.onMouseClick((_) => setState(!showRelativeValuesState))
+                selector.addEventListener('click', () => setState(!showRelativeValuesState))
                 setState(showRelativeValuesState)
             }
 
             const axisX = chart.getDefaultAxisX().setAnimationScroll(false)
             if (iTrend < _trends.length - 1) {
                 axisX
-                    .setMouseInteractions(false)
+                    .setPointerEvents(false)
                     .setThickness(0)
                     .setStrokeStyle(emptyLine)
                     .setTickStrategy(AxisTickStrategies.DateTime, (ticks) =>
@@ -832,9 +837,10 @@ dashboard.onResize(() => {
             }
 
             const series = chart
-                .addLineSeries({
-                    dataPattern: { pattern: 'ProgressiveX' },
+                .addPointLineAreaSeries({
+                    dataPattern: 'ProgressiveX',
                 })
+                .setAreaFillStyle(emptyFill)
                 .setName(`${countryInformation.name.common}`)
             const dataXY = trend.dataSet.data
                 .map((sample) => ({
@@ -842,17 +848,18 @@ dashboard.onResize(() => {
                     y: sample[trend.property],
                 }))
                 .filter((point) => point.y !== undefined && point.x >= newCasesHistoryDataTimeStart)
-            series.add(dataXY)
+            series.appendJSON(dataXY)
 
             const averageData = averagesData && averagesData[trend.property]
             let seriesAverage
             if (averageData) {
                 seriesAverage = chart
-                    .addLineSeries({
-                        dataPattern: { pattern: 'ProgressiveX' },
+                    .addPointLineAreaSeries({
+                        dataPattern: 'ProgressiveX',
                     })
+                    .setAreaFillStyle(emptyFill)
                     .setName('Global average')
-                    .add(averageData)
+                    .appendJSON(averageData)
                 const styleNormal = series.getStrokeStyle()
                 seriesAverage.setStrokeStyle(styleNormal.setFillStyle(styleNormal.getFillStyle().setA(100)))
             }
@@ -873,27 +880,17 @@ dashboard.onResize(() => {
             activateMapView(returnView)
         }
         trends.forEach((trend) => {
-            detectMouseClicks(
-                trend.chart.onSeriesBackgroundMouseClick.bind(trend.chart),
-                trend.chart.onSeriesBackgroundMouseDoubleClick.bind(trend.chart),
-                (e) => {},
-                returnPreviousView,
-            )
-            detectMouseClicks(
-                trend.chart.onBackgroundMouseClick.bind(trend.chart),
-                trend.chart.onBackgroundMouseDoubleClick.bind(trend.chart),
-                (e) => {},
-                returnPreviousView,
-            )
+            detectMouseClicks(trend.chart.seriesBackground, (e) => {}, returnPreviousView)
+            detectMouseClicks(trend.chart.background, (e) => {}, returnPreviousView)
         })
 
-        const subDrillDownOutButtonClick = drillDownOutButton.onMouseClick(() => returnPreviousView())
+        drillDownOutButton.addEventListener('click', returnPreviousView)
 
         let disposeChart = () => {
             trends.forEach((trend) => {
                 trend.chart.dispose()
             })
-            drillDownOutButton.offMouseClick(subDrillDownOutButtonClick)
+            drillDownOutButton.removeEventListener('click', returnPreviousView)
             disposeChart = undefined
         }
 
@@ -982,16 +979,16 @@ const integerToFixedLengthString = (num, len) => {
     return str
 }
 
-const detectMouseClicks = (onMouseClick, onMouseDoubleClick, handleSingleClick, handleDoubleClick) => {
+const detectMouseClicks = (interactable, handleSingleClick, handleDoubleClick) => {
     let tLastDoubleClick = 0
-    onMouseClick((_, e) => {
+    interactable.addEventListener('click', (e) => {
         setTimeout(() => {
             if (window.performance.now() - tLastDoubleClick >= 500) {
                 handleSingleClick(e)
             }
         }, 200)
     })
-    onMouseDoubleClick((_, e) => {
+    interactable.addEventListener('dblclick', (e) => {
         tLastDoubleClick = window.performance.now()
         handleDoubleClick(e)
     })
